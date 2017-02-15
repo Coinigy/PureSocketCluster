@@ -1,15 +1,12 @@
-# PureSocketCluster
-**A Cross Platform SocketCluster Client for .NET Core NetStandard**
+﻿using System;
+using System.Net.WebSockets;
+using PureSocketCluster;
+using PureWebSockets;
 
-**[NuGet Package](https://www.nuget.org/packages/PureSocketCluster)**
-
-##### Requirements
-* .NET NetStandard V1.4+
-
-##### Usage
-* Example Included in project
-
-
+namespace PureSocketClusterTest
+{
+    public class Program
+    {
         private static PureSocketClusterSocket _scc;
 
         public static void Main(string[] args)
@@ -119,5 +116,4 @@
             Console.WriteLine("");
         }
     }
-  
-  Provided by: 2017 Coinigy Inc. Coinigy.com
+}
