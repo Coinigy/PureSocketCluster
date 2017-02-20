@@ -425,20 +425,25 @@ namespace PureSocketCluster
 
         #region IDisposable Support
 
-        private bool disposedValue; // To detect redundant calls
+        private bool _disposedValue; // To detect redundant calls
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing, bool waitForSendsToComplete)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
-                    _socket.Disconnect();
-                    Task.Delay(1000).Wait();
-                    _socket.Dispose();
+                    try
+                    {
+                        _socket.Dispose(waitForSendsToComplete);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
 
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 
@@ -447,6 +452,12 @@ namespace PureSocketCluster
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
+        }
+
+        public void Dispose(bool waitForSendsToComplete)
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true, waitForSendsToComplete);
         }
 
         #endregion
