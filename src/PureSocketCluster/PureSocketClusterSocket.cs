@@ -36,6 +36,7 @@ namespace PureSocketCluster
         public event SendFailed OnSendFailed;
         public event StateChanged OnStateChanged;
 
+        public WebSocketState SocketState => _socket.State;
         public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
 
         public ushort SocketSendDelay
