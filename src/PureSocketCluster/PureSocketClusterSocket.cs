@@ -295,11 +295,11 @@ namespace PureSocketCluster
             _authToken = token;
         }
 
-        public void Connect()
+        public bool Connect()
         {
             try
             {
-                _socket.Connect();
+                return _socket.Connect();
             }
             catch (Exception ex)
             {
