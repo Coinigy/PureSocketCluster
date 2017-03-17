@@ -38,6 +38,22 @@ namespace PureSocketCluster
 
         public WebSocketState SocketState => _socket.State;
         public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
+        public int SocketSendQueueMaxLength
+        {
+            get { return _socket.SendQueueLimit; }
+            set
+            {
+                _socket.SendQueueLimit = value;
+            }
+        }
+        public TimeSpan SocketSendQueueItemTimeout
+        {
+            get { return _socket.SendCacheItemTimeout; }
+            set
+            {
+                _socket.SendCacheItemTimeout = value;
+            }
+        }
 
         public ushort SocketSendDelay
         {
@@ -49,44 +65,41 @@ namespace PureSocketCluster
             }
         }
 
-        public PureSocketClusterSocket(string url)
+        public PureSocketClusterSocket(string url, int maxSendQueueLength = 1000)
         {
-            _socket = new PureWebSocket(url);
+            _socket = new PureWebSocket(url, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
 
-
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, string authToken)
+        public PureSocketClusterSocket(string url, string authToken, int maxSendQueueLength = 1000)
         {
             _authToken = authToken;
-            _socket = new PureWebSocket(url);
+            _socket = new PureWebSocket(url, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
 
-
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, Creds creds)
+        public PureSocketClusterSocket(string url, Creds creds, int maxSendQueueLength = 1000)
         {
             _creds = creds;
-            _socket = new PureWebSocket(url);
+            _socket = new PureWebSocket(url, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
 
-
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, int maxSendQueueLength = 1000)
         {
-            _socket = new PureWebSocket(url, reconnectStrategy);
+            _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -94,10 +107,10 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken, int maxSendQueueLength = 1000)
         {
             _authToken = authToken;
-            _socket = new PureWebSocket(url, reconnectStrategy);
+            _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -105,10 +118,10 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds, int maxSendQueueLength = 1000)
         {
             _creds = creds;
-            _socket = new PureWebSocket(url, reconnectStrategy);
+            _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -173,26 +186,26 @@ namespace PureSocketCluster
             object tstrEvent = "";
             dict.TryGetValue("event", out tstrEvent);
 
-            var rid = (long?) trid;
-            var cid = (long?) tcid;
-            var strEvent = (string) tstrEvent;
+            var rid = (long?)trid;
+            var cid = (long?)tcid;
+            var strEvent = (string)tstrEvent;
 
             switch (Parser.Parse(dataobject, rid, cid, strEvent))
             {
                 case Parser.ParseResult.ISAUTHENTICATED:
-                    Id = (string) ((JObject) dataobject).GetValue("id");
+                    Id = (string)((JObject)dataobject).GetValue("id");
                     //_listener.OnAuthentication(this, (bool)((JObject)dataobject).GetValue("isAuthenticated"));
                     SubscribeChannels();
                     break;
                 case Parser.ParseResult.PUBLISH:
-                    HandlePublish((string) ((JObject) dataobject).GetValue("channel"),
-                        ((JObject) dataobject).GetValue("data"));
+                    HandlePublish((string)((JObject)dataobject).GetValue("channel"),
+                        ((JObject)dataobject).GetValue("data"));
                     break;
                 case Parser.ParseResult.REMOVETOKEN:
                     SetAuthToken(null);
                     break;
                 case Parser.ParseResult.SETTOKEN:
-                    SetAuthToken((string) ((JObject) dataobject).GetValue("token"));
+                    SetAuthToken((string)((JObject)dataobject).GetValue("token"));
                     break;
                 case Parser.ParseResult.EVENT:
 
@@ -208,7 +221,7 @@ namespace PureSocketCluster
                         _acks.Remove(rid);
                         if (Object != null)
                         {
-                            var fn = (Ackcall) Object[1];
+                            var fn = (Ackcall)Object[1];
                             if (fn != null)
                             {
                                 object err;
@@ -216,7 +229,7 @@ namespace PureSocketCluster
                                 object dat;
                                 dict.TryGetValue("data", out dat);
 
-                                fn((string) Object[0], err, dat);
+                                fn((string)Object[0], err, dat);
                             }
                             else
                             {
@@ -318,7 +331,7 @@ namespace PureSocketCluster
         {
             return (name, error, data) =>
             {
-                var dataObject = new Dictionary<string, object> {{"error", error}, {"data", data}, {"rid", cid}};
+                var dataObject = new Dictionary<string, object> { { "error", error }, { "data", data }, { "rid", cid } };
                 var json = JsonConvert.SerializeObject(dataObject, Formatting.Indented, SerializerSettings);
                 _socket.Send(json);
             };
@@ -326,7 +339,7 @@ namespace PureSocketCluster
 
         public bool Emit(string Event, object Object)
         {
-            var eventObject = new Dictionary<string, object> {{"event", Event}, {"data", Object}};
+            var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object } };
             var json = JsonConvert.SerializeObject(eventObject, Formatting.Indented, SerializerSettings);
             return _socket.Send(json);
         }
@@ -334,7 +347,7 @@ namespace PureSocketCluster
         public bool Emit(string Event, object Object, Ackcall ack)
         {
             var count = Interlocked.Increment(ref _counter);
-            var eventObject = new Dictionary<string, object> {{"event", Event}, {"data", Object}, {"cid", count}};
+            var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object }, { "cid", count } };
             _acks.Add(count, GetAckObject(Event, ack));
             var json = JsonConvert.SerializeObject(eventObject, Formatting.Indented, SerializerSettings);
             return _socket.Send(json);
@@ -420,7 +433,7 @@ namespace PureSocketCluster
 
         private static object[] GetAckObject(string Event, Ackcall ack)
         {
-            object[] Object = {Event, ack};
+            object[] Object = { Event, ack };
             return Object;
         }
 
