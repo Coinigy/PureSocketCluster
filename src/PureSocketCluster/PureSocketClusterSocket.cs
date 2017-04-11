@@ -30,6 +30,7 @@ namespace PureSocketCluster
         internal List<Channel> Channels;
         private readonly Dictionary<long?, object[]> _acks;
         private readonly Creds _creds;
+        private bool _debugMode;
 
         public event Closed OnClosed;
         public event Data OnData;
@@ -60,8 +61,12 @@ namespace PureSocketCluster
         }
         public bool DebugMode
         {
-            get { return _socket.DebugMode; }
-            set { _socket.DebugMode = value; }
+            get { return _debugMode; }
+            set
+            {
+                _debugMode = value;
+                _socket.DebugMode = value;
+            }
         }
         public ushort SocketSendDelay
         {
