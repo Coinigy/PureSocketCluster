@@ -5,8 +5,12 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -54,7 +58,11 @@ namespace PureSocketCluster
                 _socket.SendCacheItemTimeout = value;
             }
         }
-
+        public bool DebugMode
+        {
+            get { return _socket.DebugMode; }
+            set { _socket.DebugMode = value; }
+        }
         public ushort SocketSendDelay
         {
             get { return _socket?.SendDelay ?? 0; }
@@ -67,6 +75,7 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, int maxSendQueueLength = 1000)
         {
+            Log("Creating new instance.");
             _socket = new PureWebSocket(url, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
@@ -77,6 +86,7 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, string authToken, int maxSendQueueLength = 1000)
         {
+            Log("Creating new instance.");
             _authToken = authToken;
             _socket = new PureWebSocket(url, maxSendQueueLength);
             _counter = 0;
@@ -88,6 +98,7 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, Creds creds, int maxSendQueueLength = 1000)
         {
+            Log("Creating new instance.");
             _creds = creds;
             _socket = new PureWebSocket(url, maxSendQueueLength);
             _counter = 0;
@@ -99,6 +110,7 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, int maxSendQueueLength = 1000)
         {
+            Log("Creating new instance.");
             _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
@@ -109,6 +121,7 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken, int maxSendQueueLength = 1000)
         {
+            Log("Creating new instance.");
             _authToken = authToken;
             _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
             _counter = 0;
@@ -120,6 +133,7 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds, int maxSendQueueLength = 1000)
         {
+            Log("Creating new instance.");
             _creds = creds;
             _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
             _counter = 0;
@@ -131,6 +145,7 @@ namespace PureSocketCluster
 
         private void SetupEvents()
         {
+            Log("Attaching events.");
             _socket.OnOpened += socket_OnOpened;
             _socket.OnError += socket_OnError;
             _socket.OnClosed += socket_OnClosed;
@@ -143,26 +158,31 @@ namespace PureSocketCluster
 
         private void socket_OnStateChanged(WebSocketState newState, WebSocketState prevState)
         {
+            Log($"State changed fomr {prevState} to {newState}.");
             OnStateChanged?.Invoke(newState, prevState);
         }
 
         private void socket_OnSendFailed(string data, Exception ex)
         {
+            Log($"Send failed: Ex: {ex.Message}, Data: {data}");
             OnSendFailed?.Invoke(data, ex);
         }
 
         private void socket_OnFatality(string reason)
         {
+            Log($"Fatality, reason {reason}.");
             OnFatality?.Invoke(reason);
         }
 
         private void socket_OnData(byte[] data)
         {
+            Log($"Received data: {Encoding.UTF8.GetString(data)}");
             OnData?.Invoke(data);
         }
 
         private void socket_OnMessage(string message)
         {
+            Log($"Received message: {message}");
             OnMessage?.Invoke(message);
             //TODO: this can be optimized more
             if (message == "#1")
@@ -245,16 +265,19 @@ namespace PureSocketCluster
 
         private void socket_OnClosed(WebSocketCloseStatus reason)
         {
+            Log("OnClosed invoked.");
             OnClosed?.Invoke(reason);
         }
 
         private void socket_OnError(Exception ex)
         {
+            Log($"OnError invoked, {ex.Message}");
             OnError?.Invoke(ex);
         }
 
         private void socket_OnOpened()
         {
+            Log("OnOpened invoked.");
             _counter = 0;
             var authobject = new Dictionary<string, object>
             {
@@ -283,6 +306,7 @@ namespace PureSocketCluster
 
         public Channel CreateChannel(string name)
         {
+            Log($"CreateChannel invoked, {name}.");
             var channel = new Channel(this, name);
             Channels.Add(channel);
             return channel;
@@ -290,33 +314,42 @@ namespace PureSocketCluster
 
         public List<Channel> GetChannels()
         {
+            Log("GetChannels invoked.");
             return Channels;
         }
 
         public Channel GetChannelByName(string name)
         {
+            Log($"GetChannelByName invoked, {name}.");
             return Channels.FirstOrDefault(channel => channel.GetChannelName().Equals(name));
         }
 
         private void SubscribeChannels()
         {
+            Log("SubscribeChannels invoked.");
             foreach (var channel in Channels)
+            {
+                Log($"Subscribing to channel {channel.GetChannelName()}");
                 channel.Subscribe();
+            }
         }
 
         public void SetAuthToken(string token)
         {
+            Log("SetAuthToken invoked.");
             _authToken = token;
         }
 
         public bool Connect()
         {
+            Log("Connect invoked.");
             try
             {
                 return _socket.Connect();
             }
             catch (Exception ex)
             {
+                Log($"Connect thew an exception, {ex.Message}.");
                 socket_OnError(ex);
                 throw;
             }
@@ -324,11 +357,13 @@ namespace PureSocketCluster
 
         public void Disconnect()
         {
+            Log("Disconnect invoked.");
             _socket.Disconnect();
         }
 
         public Ackcall Ack(long? cid)
         {
+            Log($"Ack invoked, CID {cid}.");
             return (name, error, data) =>
             {
                 var dataObject = new Dictionary<string, object> { { "error", error }, { "data", data }, { "rid", cid } };
@@ -339,6 +374,7 @@ namespace PureSocketCluster
 
         public bool Emit(string Event, object Object)
         {
+            Log($"Emit invoked, Event {Event}, Object {Object}.");
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object } };
             var json = JsonConvert.SerializeObject(eventObject, Formatting.Indented, SerializerSettings);
             return _socket.Send(json);
@@ -346,6 +382,8 @@ namespace PureSocketCluster
 
         public bool Emit(string Event, object Object, Ackcall ack)
         {
+            if(DebugMode)
+                Log($"Emit with ack invoked, Event {Event}, Object {Object}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object }, { "cid", count } };
             _acks.Add(count, GetAckObject(Event, ack));
@@ -355,6 +393,7 @@ namespace PureSocketCluster
 
         public bool Subscribe(string channel)
         {
+            Log($"Subscribe invoked, Channel {channel}.");
             var subscribeObject = new Dictionary<string, object>
             {
                 {"event", "#subscribe"},
@@ -367,6 +406,8 @@ namespace PureSocketCluster
 
         public bool Subscribe(string channel, Ackcall ack)
         {
+            if(DebugMode)
+                Log($"Subscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var subscribeObject = new Dictionary<string, object>
             {
@@ -381,6 +422,7 @@ namespace PureSocketCluster
 
         public bool Unsubscribe(string channel)
         {
+            Log($"Unsubscribe invoked, Channel {channel}.");
             var subscribeObject = new Dictionary<string, object>
             {
                 {"event", "#unsubscribe"},
@@ -393,6 +435,8 @@ namespace PureSocketCluster
 
         public bool Unsubscribe(string channel, Ackcall ack)
         {
+            if (DebugMode)
+                Log($"Unsubscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var subscribeObject = new Dictionary<string, object>
             {
@@ -407,6 +451,7 @@ namespace PureSocketCluster
 
         public bool Publish(string channel, object data)
         {
+            Log($"Publish invoked, Channel {channel}, Data {data}.");
             var publishObject = new Dictionary<string, object>
             {
                 {"event", "#publish"},
@@ -419,6 +464,8 @@ namespace PureSocketCluster
 
         public bool Publish(string channel, object data, Ackcall ack)
         {
+            if(DebugMode)
+                Log($"Publish with ACK invoked, Channel {channel}, Data {data}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var publishObject = new Dictionary<string, object>
             {
@@ -464,16 +511,24 @@ namespace PureSocketCluster
         // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
+            Log("Dispose invoked.");
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
         }
 
         public void Dispose(bool waitForSendsToComplete)
         {
+            Log($"Dispose with waitForSendsToComplete = {waitForSendsToComplete}");
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true, waitForSendsToComplete);
         }
 
         #endregion
+
+        internal void Log(string message, [CallerMemberName] string memberName = "")
+        {
+            if (DebugMode)
+                Console.WriteLine($"{DateTime.Now:O} PureSocketClusterSocket.{memberName}: {message}");
+        }
     }
 }
