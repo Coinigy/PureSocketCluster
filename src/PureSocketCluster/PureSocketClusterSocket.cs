@@ -45,23 +45,17 @@ namespace PureSocketCluster
         public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
         public int SocketSendQueueMaxLength
         {
-            get { return _socket.SendQueueLimit; }
-            set
-            {
-                _socket.SendQueueLimit = value;
-            }
+            get => _socket.SendQueueLimit;
+            set => _socket.SendQueueLimit = value;
         }
         public TimeSpan SocketSendQueueItemTimeout
         {
-            get { return _socket.SendCacheItemTimeout; }
-            set
-            {
-                _socket.SendCacheItemTimeout = value;
-            }
+            get => _socket.SendCacheItemTimeout;
+            set => _socket.SendCacheItemTimeout = value;
         }
         public bool DebugMode
         {
-            get { return _debugMode; }
+            get => _debugMode;
             set
             {
                 _debugMode = value;
@@ -70,18 +64,20 @@ namespace PureSocketCluster
         }
         public ushort SocketSendDelay
         {
-            get { return _socket?.SendDelay ?? 0; }
-            set
-            {
-                if (_socket != null)
-                    _socket.SendDelay = value;
-            }
+            get => _socket?.SendDelay ?? 0;
+            set => _socket.SendDelay = value;
         }
 
-        public PureSocketClusterSocket(string url, int maxSendQueueLength = 1000)
+        public int DisconectWait
+        {
+            get => _socket.DisconnectWait;
+            set => _socket.DisconnectWait = value;
+        }
+
+        public PureSocketClusterSocket(string url, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
-            _socket = new PureWebSocket(url, maxSendQueueLength);
+            _socket = new PureWebSocket(url, requestHeader, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -89,11 +85,11 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, string authToken, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, string authToken, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _authToken = authToken;
-            _socket = new PureWebSocket(url, maxSendQueueLength);
+            _socket = new PureWebSocket(url, requestHeader, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -101,11 +97,11 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, Creds creds, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, Creds creds, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _creds = creds;
-            _socket = new PureWebSocket(url, maxSendQueueLength);
+            _socket = new PureWebSocket(url, requestHeader, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -113,10 +109,10 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
-            _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
+            _socket = new PureWebSocket(url, reconnectStrategy, requestHeader, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -124,11 +120,11 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _authToken = authToken;
-            _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
+            _socket = new PureWebSocket(url, reconnectStrategy, requestHeader, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -136,11 +132,11 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _creds = creds;
-            _socket = new PureWebSocket(url, reconnectStrategy, maxSendQueueLength);
+            _socket = new PureWebSocket(url, reconnectStrategy, requestHeader, maxSendQueueLength);
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
@@ -533,7 +529,7 @@ namespace PureSocketCluster
         internal void Log(string message, [CallerMemberName] string memberName = "")
         {
             if (DebugMode)
-                Console.WriteLine($"{DateTime.Now:O} PureSocketClusterSocket.{memberName}: {message}");
+                Task.Run(() => Console.WriteLine($"{DateTime.Now:O} PureSocketClusterSocket.{memberName}: {message}"));
         }
     }
 }
