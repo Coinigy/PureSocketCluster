@@ -1,16 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.15
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "PureSocketCluster", "src\PureSocketCluster\PureSocketCluster.xproj", "{F605D3BF-FB1E-4CC5-93B1-2B175C2A5401}"
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "PureSocketClusterTest", "src\PureSocketClusterTest\PureSocketClusterTest.xproj", "{8D44DC14-CB1D-42E3-8AF9-3AF670BD0DD4}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2F8BD1E5-A759-43EE-8767-3E1B571C9940}"
-	ProjectSection(SolutionItems) = preProject
-		global.json = global.json
-	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PureSocketCluster", "src\PureSocketCluster\PureSocketCluster.csproj", "{F605D3BF-FB1E-4CC5-93B1-2B175C2A5401}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PureSocketClusterTest", "src\PureSocketClusterTest\PureSocketClusterTest.csproj", "{8D44DC14-CB1D-42E3-8AF9-3AF670BD0DD4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
