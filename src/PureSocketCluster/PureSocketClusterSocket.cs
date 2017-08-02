@@ -31,6 +31,7 @@ namespace PureSocketCluster
         private readonly Dictionary<long?, object[]> _acks;
         private readonly Creds _creds;
         private bool _debugMode;
+        private object _syncLockChannels = new object();
 
         public event Closed OnClosed;
         public event Data OnData;
@@ -309,7 +310,8 @@ namespace PureSocketCluster
         {
             Log($"CreateChannel invoked, {name}.");
             var channel = new Channel(this, name);
-            Channels.Add(channel);
+            lock (_syncLockChannels)
+                Channels.Add(channel);
             return channel;
         }
 
@@ -328,11 +330,12 @@ namespace PureSocketCluster
         private void SubscribeChannels()
         {
             Log("SubscribeChannels invoked.");
-            foreach (var channel in Channels)
-            {
-                Log($"Subscribing to channel {channel.GetChannelName()}");
-                channel.Subscribe();
-            }
+            lock (_syncLockChannels)
+                foreach (var channel in Channels)
+                {
+                    Log($"Subscribing to channel {channel.GetChannelName()}");
+                    channel.Subscribe();
+                }
         }
 
         public void SetAuthToken(string token)
@@ -383,7 +386,7 @@ namespace PureSocketCluster
 
         public bool Emit(string Event, object Object, Ackcall ack)
         {
-            if(DebugMode)
+            if (DebugMode)
                 Log($"Emit with ack invoked, Event {Event}, Object {Object}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object }, { "cid", count } };
@@ -407,7 +410,7 @@ namespace PureSocketCluster
 
         public bool Subscribe(string channel, Ackcall ack)
         {
-            if(DebugMode)
+            if (DebugMode)
                 Log($"Subscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var subscribeObject = new Dictionary<string, object>
@@ -465,7 +468,7 @@ namespace PureSocketCluster
 
         public bool Publish(string channel, object data, Ackcall ack)
         {
-            if(DebugMode)
+            if (DebugMode)
                 Log($"Publish with ACK invoked, Channel {channel}, Data {data}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
             var publishObject = new Dictionary<string, object>
