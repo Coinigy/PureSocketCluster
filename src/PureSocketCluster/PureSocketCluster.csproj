@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-    <PackageReference Include="PureWebSockets" Version="1.5.0" />
+    <PackageReference Include="PureWebSockets" Version="1.6.0" />
   </ItemGroup>
 
   <Target Name="PostcompileScript" AfterTargets="Build">
