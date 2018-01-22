@@ -4,7 +4,7 @@
 **[NuGet Package](https://www.nuget.org/packages/PureSocketCluster)**
 
 ##### Requirements
-* .NET NetStandard V1.4+
+* .NET NetStandard V2.0+
 
 ##### Usage
 * Example Included in project
@@ -120,4 +120,4 @@
         }
     }
   
-  Provided by: 2017 Coinigy Inc. Coinigy.com
+  Provided by: 2018 Coinigy Inc. Coinigy.com

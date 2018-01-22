@@ -1,11 +1,11 @@
 ﻿/*
  * Author: ByronP
  * Date: 1/15/2017
+ * Mod: 1/22/2018
  * Coinigy Inc. Coinigy.com
  */
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Reflection;
@@ -13,16 +13,14 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using PureWebSockets;
+using Utf8Json;
 
 namespace PureSocketCluster
 {
     public class PureSocketClusterSocket : Emitter, IDisposable
     {
         public string Id;
-        public JsonSerializerSettings SerializerSettings { get; set; } = new JsonSerializerSettings();
 
         private readonly PureWebSocket _socket;
         private long _counter;
@@ -31,7 +29,7 @@ namespace PureSocketCluster
         private readonly Dictionary<long?, object[]> _acks;
         private readonly Creds _creds;
         private bool _debugMode;
-        private object _syncLockChannels = new object();
+        private readonly object _syncLockChannels = new object();
 
         public event Closed OnClosed;
         public event Data OnData;
@@ -75,7 +73,7 @@ namespace PureSocketCluster
             set => _socket.DisconnectWait = value;
         }
 
-        public PureSocketClusterSocket(string url, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, IEnumerable<Tuple<string, string>> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _socket = new PureWebSocket(url, requestHeader, maxSendQueueLength);
@@ -86,7 +84,7 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, string authToken, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, string authToken, IEnumerable<Tuple<string, string>> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _authToken = authToken;
@@ -98,7 +96,7 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, Creds creds, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, Creds creds, IEnumerable<Tuple<string, string>> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _creds = creds;
@@ -110,7 +108,7 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, IEnumerable<Tuple<string, string>> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _socket = new PureWebSocket(url, reconnectStrategy, requestHeader, maxSendQueueLength);
@@ -121,7 +119,7 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, string authToken, IEnumerable<Tuple<string, string>> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _authToken = authToken;
@@ -133,7 +131,7 @@ namespace PureSocketCluster
             SetupEvents();
         }
 
-        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds, Tuple<string, string> requestHeader = null, int maxSendQueueLength = 1000)
+        public PureSocketClusterSocket(string url, ReconnectStrategy reconnectStrategy, Creds creds, IEnumerable<Tuple<string, string>> requestHeader = null, int maxSendQueueLength = 1000)
         {
             Log("Creating new instance.");
             _creds = creds;
@@ -197,37 +195,32 @@ namespace PureSocketCluster
                 _socket.Send("2");
                 return;
             }
-            var dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(message);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(message);
 
-            object dataobject;
-            if (!dict.TryGetValue("data", out dataobject)) return;
-            object trid = null;
-            dict.TryGetValue("rid", out trid);
-            object tcid = null;
-            dict.TryGetValue("cid", out tcid);
-            object tstrEvent = "";
-            dict.TryGetValue("event", out tstrEvent);
+            if (!dict.TryGetValue("data", out dynamic dataobject)) return;
+            dict.TryGetValue("rid", out var trid);
+            dict.TryGetValue("cid", out var tcid);
+            dict.TryGetValue("event", out var tstrEvent);
 
-            var rid = (long?)trid;
-            var cid = (long?)tcid;
+            var rid = Convert.ToInt64(trid);
+            var cid = Convert.ToInt64(tcid);
             var strEvent = (string)tstrEvent;
 
-            switch (Parser.Parse(dataobject, rid, cid, strEvent))
+            switch (Parser.Parse(rid, strEvent))
             {
                 case Parser.ParseResult.ISAUTHENTICATED:
-                    Id = (string)((JObject)dataobject).GetValue("id");
+                    Id = dataobject["id"];
                     //_listener.OnAuthentication(this, (bool)((JObject)dataobject).GetValue("isAuthenticated"));
                     SubscribeChannels();
                     break;
                 case Parser.ParseResult.PUBLISH:
-                    HandlePublish((string)((JObject)dataobject).GetValue("channel"),
-                        ((JObject)dataobject).GetValue("data"));
+                    HandlePublish(dataobject["channel"].ToString(), dataobject["data"]);
                     break;
                 case Parser.ParseResult.REMOVETOKEN:
                     SetAuthToken(null);
                     break;
                 case Parser.ParseResult.SETTOKEN:
-                    SetAuthToken((string)((JObject)dataobject).GetValue("token"));
+                    SetAuthToken(dataobject["token"]);
                     break;
                 case Parser.ParseResult.EVENT:
 
@@ -237,21 +230,18 @@ namespace PureSocketCluster
                         HandleEmit(strEvent, dataobject);
                     break;
                 case Parser.ParseResult.ACKRECEIVE:
-                    if (_acks.ContainsKey(rid))
+                    if (_acks.TryGetValue(rid, out var value))
                     {
-                        var Object = _acks[rid];
                         _acks.Remove(rid);
-                        if (Object != null)
+                        if (value != null)
                         {
-                            var fn = (Ackcall)Object[1];
+                            var fn = (Ackcall)value[1];
                             if (fn != null)
                             {
-                                object err;
-                                dict.TryGetValue("error", out err);
-                                object dat;
-                                dict.TryGetValue("data", out dat);
+                                dict.TryGetValue("error", out var err);
+                                dict.TryGetValue("data", out var dat);
 
-                                fn((string)Object[0], err, dat);
+                                fn((string)value[0], err, dat);
                             }
                             else
                             {
@@ -287,7 +277,7 @@ namespace PureSocketCluster
                 {"data", new Dictionary<string, object> {{"authToken", _authToken}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonConvert.SerializeObject(authobject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(authobject);
 
             _socket.Send(json);
 
@@ -371,7 +361,7 @@ namespace PureSocketCluster
             return (name, error, data) =>
             {
                 var dataObject = new Dictionary<string, object> { { "error", error }, { "data", data }, { "rid", cid } };
-                var json = JsonConvert.SerializeObject(dataObject, Formatting.Indented, SerializerSettings);
+                var json = JsonSerializer.Serialize(dataObject);
                 _socket.Send(json);
             };
         }
@@ -380,7 +370,7 @@ namespace PureSocketCluster
         {
             Log($"Emit invoked, Event {Event}, Object {Object}.");
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object } };
-            var json = JsonConvert.SerializeObject(eventObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(eventObject);
             return _socket.Send(json);
         }
 
@@ -391,7 +381,7 @@ namespace PureSocketCluster
             var count = Interlocked.Increment(ref _counter);
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object }, { "cid", count } };
             _acks.Add(count, GetAckObject(Event, ack));
-            var json = JsonConvert.SerializeObject(eventObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(eventObject);
             return _socket.Send(json);
         }
 
@@ -404,7 +394,7 @@ namespace PureSocketCluster
                 {"data", new Dictionary<string, string> {{"channel", channel}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonConvert.SerializeObject(subscribeObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -420,7 +410,7 @@ namespace PureSocketCluster
                 {"cid", count}
             };
             _acks.Add(count, GetAckObject(channel, ack));
-            var json = JsonConvert.SerializeObject(subscribeObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -433,7 +423,7 @@ namespace PureSocketCluster
                 {"data", channel},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonConvert.SerializeObject(subscribeObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -449,7 +439,7 @@ namespace PureSocketCluster
                 {"cid", count}
             };
             _acks.Add(count, GetAckObject(channel, ack));
-            var json = JsonConvert.SerializeObject(subscribeObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -462,7 +452,7 @@ namespace PureSocketCluster
                 {"data", new Dictionary<string, object> {{"channel", channel}, {"data", data}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonConvert.SerializeObject(publishObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(publishObject);
             return _socket.Send(json);
         }
 
@@ -478,7 +468,7 @@ namespace PureSocketCluster
                 {"cid", count}
             };
             _acks.Add(count, GetAckObject(channel, ack));
-            var json = JsonConvert.SerializeObject(publishObject, Formatting.Indented, SerializerSettings);
+            var json = JsonSerializer.Serialize(publishObject);
             return _socket.Send(json);
         }
 

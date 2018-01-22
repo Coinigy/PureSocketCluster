@@ -23,10 +23,7 @@
             return this;
         }
 
-        public void OnMessage(Listener listener)
-        {
-            _socket.OnSubscribe(_channelname, listener);
-        }
+        public void OnMessage(Listener listener) => _socket.OnSubscribe(_channelname, listener);
 
         public void Publish(object data) => _socket.Publish(_channelname, data);
 

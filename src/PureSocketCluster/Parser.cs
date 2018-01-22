@@ -12,7 +12,7 @@
             ACKRECEIVE
         }
 
-        internal static ParseResult Parse(object dataobject, long? rid, long? cid, string strEvent)
+        internal static ParseResult Parse(long? rid, string strEvent)
         {
             if (string.IsNullOrEmpty(strEvent)) return rid == 1 ? ParseResult.ISAUTHENTICATED : ParseResult.ACKRECEIVE;
             switch (strEvent)
