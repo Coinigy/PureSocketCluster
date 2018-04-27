@@ -15,12 +15,17 @@ namespace PureSocketClusterTest
             var creds = new Creds
             {
                 apiKey = "your apikey if used",
-                apiSecret = "your api secret if used"
-            };
+				apiSecret = "your api secret if used"
+			};
 
             // initialize the client
-            _scc = new PureSocketClusterSocket("wss://yoursocketclusterserver.com/socketcluster/",
-                new ReconnectStrategy(4000, 60000), creds);
+            _scc = new PureSocketClusterSocket("wss://yoursocketclusterserver.com/socketcluster/", new ReconnectStrategy(4000, 60000), creds);
+
+			// turn on debug mode which will show exactly what is happeneing
+	        _scc.DebugMode = true;
+
+			// the default serializer is UTF8JSON, if you have issues or want to use your own you can do so as below
+			_scc.SetSerializer(new NewtonsoftSerializer());
 
             // hook up to some events
             _scc.OnOpened += Scc_OnOpened;
