@@ -250,3 +250,7 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+src/PureSocketClusterTest/JWTHelper/JWT/
+
+src/PureSocketClusterTest/JWTHelper/JsonWebToken\.cs
