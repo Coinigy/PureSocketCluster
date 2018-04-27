@@ -1,7 +1,7 @@
 ﻿/*
  * Author: ByronP
  * Date: 1/15/2017
- * Mod: 1/22/2018
+ * Mod: 4/27/2018
  * Coinigy Inc. Coinigy.com
  */
 using System;
@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using PureWebSockets;
-using Utf8Json;
 
 namespace PureSocketCluster
 {
@@ -30,6 +29,7 @@ namespace PureSocketCluster
         private readonly Creds _creds;
         private bool _debugMode;
         private readonly object _syncLockChannels = new object();
+	    private ISerializer _serializer = new Utf8JsonSerializer();
 
         public event Closed OnClosed;
         public event Data OnData;
@@ -156,6 +156,15 @@ namespace PureSocketCluster
             _socket.OnStateChanged += socket_OnStateChanged;
         }
 
+		/// <summary>
+		/// Set a custom de/serializer (default internal is UTF8JSON).
+		/// </summary>
+		/// <param name="serializer">your serializer</param>
+	    public void SetSerializer(ISerializer serializer)
+	    {
+		    _serializer = serializer;
+	    }
+
         private void socket_OnStateChanged(WebSocketState newState, WebSocketState prevState)
         {
             Log($"State changed fomr {prevState} to {newState}.");
@@ -195,7 +204,7 @@ namespace PureSocketCluster
                 _socket.Send("2");
                 return;
             }
-            var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(message);
+            var dict = _serializer.Deserialize<Dictionary<string, object>>(message);
 
             if (!dict.TryGetValue("data", out dynamic dataobject)) return;
             dict.TryGetValue("rid", out var trid);
@@ -277,7 +286,7 @@ namespace PureSocketCluster
                 {"data", new Dictionary<string, object> {{"authToken", _authToken}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonSerializer.Serialize(authobject);
+            var json = _serializer.Serialize(authobject);
 
             _socket.Send(json);
 
@@ -361,7 +370,7 @@ namespace PureSocketCluster
             return (name, error, data) =>
             {
                 var dataObject = new Dictionary<string, object> { { "error", error }, { "data", data }, { "rid", cid } };
-                var json = JsonSerializer.Serialize(dataObject);
+                var json = _serializer.Serialize(dataObject);
                 _socket.Send(json);
             };
         }
@@ -370,7 +379,7 @@ namespace PureSocketCluster
         {
             Log($"Emit invoked, Event {Event}, Object {Object}.");
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object } };
-            var json = JsonSerializer.Serialize(eventObject);
+            var json = _serializer.Serialize(eventObject);
             return _socket.Send(json);
         }
 
@@ -381,7 +390,7 @@ namespace PureSocketCluster
             var count = Interlocked.Increment(ref _counter);
             var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object }, { "cid", count } };
             _acks.Add(count, GetAckObject(Event, ack));
-            var json = JsonSerializer.Serialize(eventObject);
+            var json = _serializer.Serialize(eventObject);
             return _socket.Send(json);
         }
 
@@ -394,7 +403,7 @@ namespace PureSocketCluster
                 {"data", new Dictionary<string, string> {{"channel", channel}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonSerializer.Serialize(subscribeObject);
+            var json = _serializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -410,7 +419,7 @@ namespace PureSocketCluster
                 {"cid", count}
             };
             _acks.Add(count, GetAckObject(channel, ack));
-            var json = JsonSerializer.Serialize(subscribeObject);
+            var json = _serializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -423,7 +432,7 @@ namespace PureSocketCluster
                 {"data", channel},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonSerializer.Serialize(subscribeObject);
+            var json = _serializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -439,7 +448,7 @@ namespace PureSocketCluster
                 {"cid", count}
             };
             _acks.Add(count, GetAckObject(channel, ack));
-            var json = JsonSerializer.Serialize(subscribeObject);
+            var json = _serializer.Serialize(subscribeObject);
             return _socket.Send(json);
         }
 
@@ -452,7 +461,7 @@ namespace PureSocketCluster
                 {"data", new Dictionary<string, object> {{"channel", channel}, {"data", data}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = JsonSerializer.Serialize(publishObject);
+            var json = _serializer.Serialize(publishObject);
             return _socket.Send(json);
         }
 
@@ -468,7 +477,7 @@ namespace PureSocketCluster
                 {"cid", count}
             };
             _acks.Add(count, GetAckObject(channel, ack));
-            var json = JsonSerializer.Serialize(publishObject);
+            var json = _serializer.Serialize(publishObject);
             return _socket.Send(json);
         }
 
