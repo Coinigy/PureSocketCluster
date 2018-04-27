@@ -18,14 +18,17 @@ namespace PureSocketClusterTest
 				apiSecret = "your api secret if used"
 			};
 
-            // initialize the client
-            _scc = new PureSocketClusterSocket("wss://yoursocketclusterserver.com/socketcluster/", new ReconnectStrategy(4000, 60000), creds);
+			// setup our options
+	        var opts = new PureSocketClusterOptions
+	        {
+		        Creds = creds, // set our credentials
+		        MyReconnectStrategy = new ReconnectStrategy(4000, 60000), // how to handle reconnects
+				//Serializer = new NewtonsoftSerializer(), // the default serializer is UTF8JSON, if you have issues or want to use your own you can do so
+		        DebugMode = true // turn on debug mode to see detailed output
+	        };
 
-			// turn on debug mode which will show exactly what is happeneing
-	        _scc.DebugMode = true;
-
-			// the default serializer is UTF8JSON, if you have issues or want to use your own you can do so as below
-			_scc.SetSerializer(new NewtonsoftSerializer());
+	        // initialize the client
+            _scc = new PureSocketClusterSocket("wss://yoursocketclusterserver.com/socketcluster/", opts);
 
             // hook up to some events
             _scc.OnOpened += Scc_OnOpened;
@@ -43,7 +46,7 @@ namespace PureSocketClusterTest
             cn.OnMessage(TradeData);
             var cn0 = _scc.CreateChannel("TRADE-PLNX--BTC--ETH").Subscribe();
             cn0.OnMessage(TradeData);
-            var cn1 = _scc.CreateChannel("TRADE-OK--BTC--USD").Subscribe();
+            var cn1 = _scc.CreateChannel("TRADE-GDAX--BTC--USD").Subscribe();
             cn1.OnMessage(TradeData);
 
             Console.ReadLine();
@@ -51,6 +54,7 @@ namespace PureSocketClusterTest
 
         private static void _scc_OnFatality(string reason)
         {
+			// fatality is as bad as it gets and you should probably quit here
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine($"Fatality: {reason}");
             Console.ResetColor();
