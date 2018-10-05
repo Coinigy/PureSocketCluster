@@ -21,6 +21,13 @@
     <PackageTags>socketcluster, socket, cluster, core, netstandard, websockets, websocket, client</PackageTags>
     <Copyright>2018 Coinigy Inc, Coinigy.com</Copyright>
     <PackageReleaseNotes>See git for latest changes.</PackageReleaseNotes>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
