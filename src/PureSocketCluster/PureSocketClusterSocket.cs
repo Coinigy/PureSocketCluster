@@ -142,7 +142,7 @@ namespace PureSocketCluster
                     SetAuthToken(null);
                     break;
                 case Parser.ParseResult.SETTOKEN:
-                    SetAuthToken(dataobject["token"]);
+                    SetAuthToken(dataobject["token"].ToString());
                     break;
                 case Parser.ParseResult.EVENT:
 
