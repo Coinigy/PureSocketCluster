@@ -19,11 +19,11 @@ namespace PureSocketCluster
 {
     public class PureSocketClusterSocket : Emitter, IDisposable
     {
-	    public string Id;
-	    public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
-	    public WebSocketState SocketState => _socket.State;
+        public string Id;
+        public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
+        public WebSocketState SocketState => _socket.State;
 
-	    internal List<Channel> Channels;
+        internal List<Channel> Channels;
 
         private readonly PureWebSocket _socket;
         private long _counter;
@@ -44,17 +44,17 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, PureSocketClusterOptions options)
         {
-	        _options = options;
+            _options = options;
 
-	        Log("Creating new instance.");
+            Log("Creating new instance.");
 
-	        if (options.Serializer is null)
-		        options.Serializer = new Utf8JsonSerializer();
+            if (options.Serializer is null)
+                options.Serializer = new Utf8JsonSerializer();
             _counter = 0;
             Channels = new List<Channel>();
             _acks = new Dictionary<long?, object[]>();
 
-	        _socket = new PureWebSocket(url, options);
+            _socket = new PureWebSocket(url, options);
 
             SetupEvents();
         }
@@ -72,13 +72,13 @@ namespace PureSocketCluster
             _socket.OnStateChanged += Socket_OnStateChanged;
         }
 
-		/// <summary>
-		/// Set a custom de/serializer (default internal is UTF8JSON).
-		/// </summary>
-		/// <param name="serializer">your serializer</param>
-		public void SetSerializer(ISerializer serializer) => _options.Serializer = serializer;
+        /// <summary>
+        /// Set a custom de/serializer (default internal is UTF8JSON).
+        /// </summary>
+        /// <param name="serializer">your serializer</param>
+        public void SetSerializer(ISerializer serializer) => _options.Serializer = serializer;
 
-		private void Socket_OnStateChanged(WebSocketState newState, WebSocketState prevState)
+        private void Socket_OnStateChanged(WebSocketState newState, WebSocketState prevState)
         {
             Log($"State changed fomr {prevState} to {newState}.");
             OnStateChanged?.Invoke(newState, prevState);
@@ -142,7 +142,7 @@ namespace PureSocketCluster
                     SetAuthToken(null);
                     break;
                 case Parser.ParseResult.SETTOKEN:
-                    SetAuthToken(dataobject["token"]);
+                    SetAuthToken(dataobject["token"].ToString());
                     break;
                 case Parser.ParseResult.EVENT:
 
@@ -230,15 +230,15 @@ namespace PureSocketCluster
         public List<Channel> GetChannels()
         {
             Log("GetChannels invoked.");
-	        lock (_syncLockChannels)
-				return Channels;
+            lock (_syncLockChannels)
+                return Channels;
         }
 
         public Channel GetChannelByName(string name)
         {
             Log($"GetChannelByName invoked, {name}.");
-	        lock (_syncLockChannels)
-				return Channels.FirstOrDefault(channel => channel.GetChannelName().Equals(name));
+            lock (_syncLockChannels)
+                return Channels.FirstOrDefault(channel => channel.GetChannelName().Equals(name));
         }
 
         private void SubscribeChannels()
@@ -394,7 +394,7 @@ namespace PureSocketCluster
 
         private static object[] GetAckObject(string Event, Ackcall ack) => new object[] { Event, ack };
 
-	    #region IDisposable Support
+        #region IDisposable Support
 
         private bool _disposedValue; // To detect redundant calls
 
