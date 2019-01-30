@@ -136,7 +136,8 @@ namespace PureSocketCluster
                 case Parser.ParseResult.ISAUTHENTICATED:
                     Id = dataobject["id"];
                     //_listener.OnAuthentication(this, (bool)((JObject)dataobject).GetValue("isAuthenticated"));
-                    SubscribeChannels();
+                    if(Channels.Any())
+                        SubscribeChannels();
                     break;
                 case Parser.ParseResult.PUBLISH:
                     HandlePublish(dataobject["channel"].ToString(), dataobject["data"]);
