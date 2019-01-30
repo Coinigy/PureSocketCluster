@@ -1,7 +1,7 @@
 ﻿/*
  * Author: ByronP
  * Date: 1/15/2017
- * Mod: 4/27/2018
+ * Mod: 01/30/2019
  * Coinigy Inc. Coinigy.com
  */
 using System;
@@ -122,7 +122,8 @@ namespace PureSocketCluster
 
             var dict = _options.Serializer.Deserialize<Dictionary<string, object>>(message);
 
-            if (!dict.TryGetValue("data", out dynamic dataobject)) return;
+            if (!dict.TryGetValue("data", out dynamic dataobject))
+                return;
             dict.TryGetValue("rid", out var trid);
             dict.TryGetValue("cid", out var tcid);
             dict.TryGetValue("event", out var tstrEvent);
