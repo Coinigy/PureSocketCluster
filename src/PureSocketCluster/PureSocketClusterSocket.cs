@@ -51,7 +51,9 @@ namespace PureSocketCluster
             if (options.Serializer is null)
                 options.Serializer = new Utf8JsonSerializer();
             _counter = 0;
+
             Channels = new List<Channel>();
+
             _acks = new Dictionary<long?, object[]>();
 
             _socket = new PureWebSocket(url, options);
@@ -106,17 +108,18 @@ namespace PureSocketCluster
         {
             Log($"Received message: {message}");
             OnMessage?.Invoke(message);
-            //TODO: this can be optimized more
+
             if (message == "#1")
             {
                 _socket.Send("#2");
                 return;
             }
-            if (message == "1")
+            else if (message == "1")
             {
                 _socket.Send("2");
                 return;
             }
+
             var dict = _options.Serializer.Deserialize<Dictionary<string, object>>(message);
 
             if (!dict.TryGetValue("data", out dynamic dataobject)) return;
@@ -145,7 +148,6 @@ namespace PureSocketCluster
                     SetAuthToken(dataobject["token"].ToString());
                     break;
                 case Parser.ParseResult.EVENT:
-
                     if (HasEventAck(strEvent))
                         HandleEmitAck(strEvent, dataobject, Ack(cid));
                     else
@@ -211,12 +213,6 @@ namespace PureSocketCluster
 
             OnOpened?.Invoke();
         }
-
-        // TODO: invalid ssl bypass
-        //public void SetSslCertVerification(bool value)
-        //{
-        //    //_socket.AllowUnstrustedCertificate = value;
-        //}
 
         public Channel CreateChannel(string name)
         {
