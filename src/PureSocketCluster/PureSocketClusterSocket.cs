@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using PureSocketCluster.Nito;
 using PureWebSockets;
 
 namespace PureSocketCluster
@@ -30,7 +31,8 @@ namespace PureSocketCluster
         private string _authToken;
         private readonly Dictionary<long?, object[]> _acks;
         private readonly PureSocketClusterOptions _options;
-        private readonly object _syncLockChannels = new object();
+        private readonly AsyncLock _syncLockChannels = new AsyncLock();
+        //private readonly object _syncLockChannels = new object();
 
         public event Closed OnClosed;
         public event Data OnData;
@@ -40,7 +42,6 @@ namespace PureSocketCluster
         public event Opened OnOpened;
         public event SendFailed OnSendFailed;
         public event StateChanged OnStateChanged;
-
 
         public PureSocketClusterSocket(string url, PureSocketClusterOptions options)
         {
@@ -111,12 +112,12 @@ namespace PureSocketCluster
 
             if (message == "#1")
             {
-                _socket.Send("#2");
+                _ = _socket.SendAsync("#2");
                 return;
             }
             else if (message == "1")
             {
-                _socket.Send("2");
+                _ =_socket.SendAsync("2");
                 return;
             }
 
@@ -138,11 +139,11 @@ namespace PureSocketCluster
                     Id = dataObject["id"];
                     //_listener.OnAuthentication(this, (bool)((JObject)dataObject).GetValue("isAuthenticated"));
                     bool hasChannels;
-                    lock (_syncLockChannels)
+                    using (_syncLockChannels.Lock())
                         hasChannels = Channels.Any();
 
                     if (hasChannels)
-                            SubscribeChannels();
+                            _ = SubscribeChannelsAsync();
                     break;
                 case Parser.ParseResult.Publish:
                     HandlePublish(dataObject["channel"], dataObject["data"]);
@@ -224,7 +225,7 @@ namespace PureSocketCluster
         {
             Log($"CreateChannel invoked, {name}.");
             var channel = new Channel(this, name);
-            lock (_syncLockChannels)
+            using (_syncLockChannels.Lock())
                 Channels.Add(channel);
             return channel;
         }
@@ -232,25 +233,36 @@ namespace PureSocketCluster
         public List<Channel> GetChannels()
         {
             Log("GetChannels invoked.");
-            lock (_syncLockChannels)
+            using (_syncLockChannels.Lock())
                 return Channels;
         }
 
         public Channel GetChannelByName(string name)
         {
             Log($"GetChannelByName invoked, {name}.");
-            lock (_syncLockChannels)
+            using (_syncLockChannels.Lock())
                 return Channels.FirstOrDefault(channel => channel.GetChannelName().Equals(name));
         }
 
         private void SubscribeChannels()
         {
             Log("SubscribeChannels invoked.");
-            lock (_syncLockChannels)
+            using (_syncLockChannels.Lock())
                 foreach (var channel in Channels)
                 {
                     Log($"Subscribing to channel {channel.GetChannelName()}");
                     channel.Subscribe();
+                }
+        }
+
+        private async Task SubscribeChannelsAsync()
+        {
+            Log("SubscribeChannels invoked.");
+            using (await _syncLockChannels.LockAsync())
+                foreach (var channel in Channels)
+                {
+                    Log($"Subscribing to channel {channel.GetChannelName()}");
+                    await channel.SubscribeAsync();
                 }
         }
 
@@ -266,6 +278,21 @@ namespace PureSocketCluster
             try
             {
                 return _socket.Connect();
+            }
+            catch (Exception ex)
+            {
+                Log($"Connect thew an exception, {ex.Message}.");
+                Socket_OnError(ex);
+                throw;
+            }
+        }
+
+        public Task<bool> ConnectAsync()
+        {
+            Log("Connect invoked.");
+            try
+            {
+                return _socket.ConnectAsync();
             }
             catch (Exception ex)
             {
@@ -300,6 +327,14 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
+        public Task<bool> EmitAsync(string Event, object Object)
+        {
+            Log($"Emit invoked, Event {Event}, Object {Object}.");
+            var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object } };
+            var json = _options.Serializer.Serialize(eventObject);
+            return _socket.SendAsync(json);
+        }
+
         public bool Emit(string Event, object Object, AckCall ack)
         {
             Log($"Emit with ack invoked, Event {Event}, Object {Object}, ACK {ack.GetMethodInfo().Name}.");
@@ -308,6 +343,16 @@ namespace PureSocketCluster
             _acks.Add(count, GetAckObject(Event, ack));
             var json = _options.Serializer.Serialize(eventObject);
             return _socket.Send(json);
+        }
+
+        public Task<bool> EmitAsync(string Event, object Object, AckCall ack)
+        {
+            Log($"Emit with ack invoked, Event {Event}, Object {Object}, ACK {ack.GetMethodInfo().Name}.");
+            var count = Interlocked.Increment(ref _counter);
+            var eventObject = new Dictionary<string, object> { { "event", Event }, { "data", Object }, { "cid", count } };
+            _acks.Add(count, GetAckObject(Event, ack));
+            var json = _options.Serializer.Serialize(eventObject);
+            return _socket.SendAsync(json);
         }
 
         public bool Subscribe(string channel)
@@ -321,6 +366,19 @@ namespace PureSocketCluster
             };
             var json = _options.Serializer.Serialize(subscribeObject);
             return _socket.Send(json);
+        }
+
+        public Task<bool> SubscribeAsync(string channel)
+        {
+            Log($"Subscribe invoked, Channel {channel}.");
+            var subscribeObject = new Dictionary<string, object>
+            {
+                {"event", "#subscribe"},
+                {"data", new Dictionary<string, string> {{"channel", channel}}},
+                {"cid", Interlocked.Increment(ref _counter)}
+            };
+            var json = _options.Serializer.Serialize(subscribeObject);
+            return _socket.SendAsync(json);
         }
 
         public bool Subscribe(string channel, AckCall ack)
@@ -338,6 +396,21 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
+        public Task<bool> SubscribeAsync(string channel, AckCall ack)
+        {
+            Log($"Subscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
+            var count = Interlocked.Increment(ref _counter);
+            var subscribeObject = new Dictionary<string, object>
+            {
+                {"event", "#subscribe"},
+                {"data", new Dictionary<string, string> {{"channel", channel}}},
+                {"cid", count}
+            };
+            _acks.Add(count, GetAckObject(channel, ack));
+            var json = _options.Serializer.Serialize(subscribeObject);
+            return _socket.SendAsync(json);
+        }
+
         public bool Unsubscribe(string channel)
         {
             Log($"Unsubscribe invoked, Channel {channel}.");
@@ -349,6 +422,19 @@ namespace PureSocketCluster
             };
             var json = _options.Serializer.Serialize(subscribeObject);
             return _socket.Send(json);
+        }
+
+        public Task<bool> UnsubscribeAsync(string channel)
+        {
+            Log($"Unsubscribe invoked, Channel {channel}.");
+            var subscribeObject = new Dictionary<string, object>
+            {
+                {"event", "#unsubscribe"},
+                {"data", channel},
+                {"cid", Interlocked.Increment(ref _counter)}
+            };
+            var json = _options.Serializer.Serialize(subscribeObject);
+            return _socket.SendAsync(json);
         }
 
         public bool Unsubscribe(string channel, AckCall ack)
@@ -366,6 +452,21 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
+        public Task<bool> UnsubscribeAsync(string channel, AckCall ack)
+        {
+            Log($"Unsubscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
+            var count = Interlocked.Increment(ref _counter);
+            var subscribeObject = new Dictionary<string, object>
+            {
+                {"event", "#unsubscribe"},
+                {"data", channel},
+                {"cid", count}
+            };
+            _acks.Add(count, GetAckObject(channel, ack));
+            var json = _options.Serializer.Serialize(subscribeObject);
+            return _socket.SendAsync(json);
+        }
+
         public bool Publish(string channel, object data)
         {
             Log($"Publish invoked, Channel {channel}, Data {data}.");
@@ -377,6 +478,19 @@ namespace PureSocketCluster
             };
             var json = _options.Serializer.Serialize(publishObject);
             return _socket.Send(json);
+        }
+
+        public Task<bool> PublishAsync(string channel, object data)
+        {
+            Log($"Publish invoked, Channel {channel}, Data {data}.");
+            var publishObject = new Dictionary<string, object>
+            {
+                {"event", "#publish"},
+                {"data", new Dictionary<string, object> {{"channel", channel}, {"data", data}}},
+                {"cid", Interlocked.Increment(ref _counter)}
+            };
+            var json = _options.Serializer.Serialize(publishObject);
+            return _socket.SendAsync(json);
         }
 
         public bool Publish(string channel, object data, AckCall ack)
@@ -392,6 +506,21 @@ namespace PureSocketCluster
             _acks.Add(count, GetAckObject(channel, ack));
             var json = _options.Serializer.Serialize(publishObject);
             return _socket.Send(json);
+        }
+
+        public Task<bool> PublishAsync(string channel, object data, AckCall ack)
+        {
+            Log($"Publish with ACK invoked, Channel {channel}, Data {data}, ACK {ack.GetMethodInfo().Name}.");
+            var count = Interlocked.Increment(ref _counter);
+            var publishObject = new Dictionary<string, object>
+            {
+                {"event", "#publish"},
+                {"data", new Dictionary<string, object> {{"channel", channel}, {"data", data}}},
+                {"cid", count}
+            };
+            _acks.Add(count, GetAckObject(channel, ack));
+            var json = _options.Serializer.Serialize(publishObject);
+            return _socket.SendAsync(json);
         }
 
         private static object[] GetAckObject(string Event, AckCall ack) => new object[] { Event, ack };
