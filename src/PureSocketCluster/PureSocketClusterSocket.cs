@@ -82,7 +82,7 @@ namespace PureSocketCluster
 
         private void Socket_OnStateChanged(WebSocketState newState, WebSocketState prevState)
         {
-            Log($"State changed fomr {prevState} to {newState}.");
+            Log($"State changed from {prevState} to {newState}.");
             OnStateChanged?.Invoke(newState, prevState);
         }
 
@@ -122,46 +122,50 @@ namespace PureSocketCluster
 
             var dict = _options.Serializer.Deserialize<Dictionary<string, object>>(message);
 
-            if (!dict.TryGetValue("data", out dynamic dataobject))
+            if (!dict.TryGetValue("data", out dynamic dataObject))
                 return;
-            dict.TryGetValue("rid", out var trid);
-            dict.TryGetValue("cid", out var tcid);
-            dict.TryGetValue("event", out var tstrEvent);
+            dict.TryGetValue("rid", out var tmpRid);
+            dict.TryGetValue("cid", out var tmpCid);
+            dict.TryGetValue("event", out var tmpStrEvent);
 
-            var rid = Convert.ToInt64(trid);
-            var cid = Convert.ToInt64(tcid);
-            var strEvent = (string)tstrEvent;
+            var rid = Convert.ToInt64(tmpRid);
+            var cid = Convert.ToInt64(tmpCid);
+            var strEvent = (string)tmpStrEvent;
 
             switch (Parser.Parse(rid, strEvent))
             {
-                case Parser.ParseResult.ISAUTHENTICATED:
-                    Id = dataobject["id"];
-                    //_listener.OnAuthentication(this, (bool)((JObject)dataobject).GetValue("isAuthenticated"));
-                    if(Channels.Any())
-                        SubscribeChannels();
+                case Parser.ParseResult.IsAuthenticated:
+                    Id = dataObject["id"];
+                    //_listener.OnAuthentication(this, (bool)((JObject)dataObject).GetValue("isAuthenticated"));
+                    bool hasChannels;
+                    lock (_syncLockChannels)
+                        hasChannels = Channels.Any();
+
+                    if (hasChannels)
+                            SubscribeChannels();
                     break;
-                case Parser.ParseResult.PUBLISH:
-                    HandlePublish(dataobject["channel"].ToString(), dataobject["data"]);
+                case Parser.ParseResult.Publish:
+                    HandlePublish(dataObject["channel"], dataObject["data"]);
                     break;
-                case Parser.ParseResult.REMOVETOKEN:
+                case Parser.ParseResult.RemoveToken:
                     SetAuthToken(null);
                     break;
-                case Parser.ParseResult.SETTOKEN:
-                    SetAuthToken(dataobject["token"].ToString());
+                case Parser.ParseResult.SetToken:
+                    SetAuthToken(dataObject["token"]);
                     break;
-                case Parser.ParseResult.EVENT:
+                case Parser.ParseResult.Event:
                     if (HasEventAck(strEvent))
-                        HandleEmitAck(strEvent, dataobject, Ack(cid));
+                        HandleEmitAck(strEvent, dataObject, Ack(cid));
                     else
-                        HandleEmit(strEvent, dataobject);
+                        HandleEmit(strEvent, dataObject);
                     break;
-                case Parser.ParseResult.ACKRECEIVE:
+                case Parser.ParseResult.AckReceive:
                     if (_acks.TryGetValue(rid, out var value))
                     {
                         _acks.Remove(rid);
                         if (value != null)
                         {
-                            var fn = (Ackcall)value[1];
+                            var fn = (AckCall)value[1];
                             if (fn != null)
                             {
                                 dict.TryGetValue("error", out var err);
@@ -197,13 +201,13 @@ namespace PureSocketCluster
         {
             Log("OnOpened invoked.");
             _counter = 0;
-            var authobject = new Dictionary<string, object>
+            var authObject = new Dictionary<string, object>
             {
                 {"event", "#handshake"},
                 {"data", new Dictionary<string, object> {{"authToken", _authToken}}},
                 {"cid", Interlocked.Increment(ref _counter)}
             };
-            var json = _options.Serializer.Serialize(authobject);
+            var json = _options.Serializer.Serialize(authObject);
 
             _socket.Send(json);
 
@@ -277,7 +281,7 @@ namespace PureSocketCluster
             _socket.Disconnect();
         }
 
-        public Ackcall Ack(long? cid)
+        public AckCall Ack(long? cid)
         {
             Log($"Ack invoked, CID {cid}.");
             return (name, error, data) =>
@@ -296,7 +300,7 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
-        public bool Emit(string Event, object Object, Ackcall ack)
+        public bool Emit(string Event, object Object, AckCall ack)
         {
             Log($"Emit with ack invoked, Event {Event}, Object {Object}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
@@ -319,7 +323,7 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
-        public bool Subscribe(string channel, Ackcall ack)
+        public bool Subscribe(string channel, AckCall ack)
         {
             Log($"Subscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
@@ -347,7 +351,7 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
-        public bool Unsubscribe(string channel, Ackcall ack)
+        public bool Unsubscribe(string channel, AckCall ack)
         {
             Log($"Unsubscribe with ACK invoked, Channel {channel}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
@@ -375,7 +379,7 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
-        public bool Publish(string channel, object data, Ackcall ack)
+        public bool Publish(string channel, object data, AckCall ack)
         {
             Log($"Publish with ACK invoked, Channel {channel}, Data {data}, ACK {ack.GetMethodInfo().Name}.");
             var count = Interlocked.Increment(ref _counter);
@@ -390,7 +394,7 @@ namespace PureSocketCluster
             return _socket.Send(json);
         }
 
-        private static object[] GetAckObject(string Event, Ackcall ack) => new object[] { Event, ack };
+        private static object[] GetAckObject(string Event, AckCall ack) => new object[] { Event, ack };
 
         #region IDisposable Support
 

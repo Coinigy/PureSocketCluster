@@ -4,27 +4,27 @@
     {
         internal enum ParseResult
         {
-            ISAUTHENTICATED,
-            PUBLISH,
-            REMOVETOKEN,
-            SETTOKEN,
-            EVENT,
-            ACKRECEIVE
+            IsAuthenticated,
+            Publish,
+            RemoveToken,
+            SetToken,
+            Event,
+            AckReceive
         }
 
         internal static ParseResult Parse(long? rid, string strEvent)
         {
-            if (string.IsNullOrEmpty(strEvent)) return rid == 1 ? ParseResult.ISAUTHENTICATED : ParseResult.ACKRECEIVE;
+            if (string.IsNullOrEmpty(strEvent)) return rid == 1 ? ParseResult.IsAuthenticated : ParseResult.AckReceive;
             switch (strEvent)
             {
                 case "#publish":
-                    return ParseResult.PUBLISH;
+                    return ParseResult.Publish;
                 case "#removeAuthToken":
-                    return ParseResult.REMOVETOKEN;
+                    return ParseResult.RemoveToken;
                 case "#setAuthToken":
-                    return ParseResult.SETTOKEN;
+                    return ParseResult.SetToken;
                 default:
-                    return ParseResult.EVENT;
+                    return ParseResult.Event;
             }
         }
     }

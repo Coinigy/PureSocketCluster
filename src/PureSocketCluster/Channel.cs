@@ -2,45 +2,45 @@
 {
     public class Channel
     {
-        private readonly string _channelname;
+        private readonly string _channelName;
         private readonly PureSocketClusterSocket _socket;
 
         public Channel(PureSocketClusterSocket socket, string channelName)
         {
             _socket = socket;
-            _channelname = channelName;
+            _channelName = channelName;
         }
 
         public Channel Subscribe()
         {
-            _socket.Subscribe(_channelname);
+            _socket.Subscribe(_channelName);
             return this;
         }
 
-        public Channel Subscribe(Ackcall ack)
+        public Channel Subscribe(AckCall ack)
         {
-            _socket.Subscribe(_channelname, ack);
+            _socket.Subscribe(_channelName, ack);
             return this;
         }
 
-        public void OnMessage(Listener listener) => _socket.OnSubscribe(_channelname, listener);
+        public void OnMessage(Listener listener) => _socket.OnSubscribe(_channelName, listener);
 
-        public void Publish(object data) => _socket.Publish(_channelname, data);
+        public void Publish(object data) => _socket.Publish(_channelName, data);
 
-        public void Publish(object data, Ackcall ack) => _socket.Publish(_channelname, data, ack);
+        public void Publish(object data, AckCall ack) => _socket.Publish(_channelName, data, ack);
 
         public void Unsubscribe()
         {
-            _socket.Unsubscribe(_channelname);
+            _socket.Unsubscribe(_channelName);
             _socket.Channels.Remove(this);
         }
 
-        public void Unsubscribe(Ackcall ack)
+        public void Unsubscribe(AckCall ack)
         {
-            _socket.Unsubscribe(_channelname, ack);
+            _socket.Unsubscribe(_channelName, ack);
             _socket.Channels.Remove(this);
         }
 
-        public string GetChannelName() => _channelname;
+        public string GetChannelName() => _channelName;
     }
 }

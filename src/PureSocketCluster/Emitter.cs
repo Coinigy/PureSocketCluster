@@ -4,58 +4,58 @@ namespace PureSocketCluster
 {
     public class Emitter
     {
-        private readonly Dictionary<string, Listener> _singlecallbacks = new Dictionary<string, Listener>();
-        private readonly Dictionary<string, AckListener> _singleackcallbacks = new Dictionary<string, AckListener>();
-        private readonly Dictionary<string, Listener> _publishcallbacks = new Dictionary<string, Listener>();
+        private readonly Dictionary<string, Listener> _singleCallbacks = new Dictionary<string, Listener>();
+        private readonly Dictionary<string, AckListener> _singleAckCallbacks = new Dictionary<string, AckListener>();
+        private readonly Dictionary<string, Listener> _publishCallbacks = new Dictionary<string, Listener>();
 
         public Emitter On(string Event, Listener fn)
         {
-            if (_singlecallbacks.ContainsKey(Event))
-                _singlecallbacks.Remove(Event);
+            if (_singleCallbacks.ContainsKey(Event))
+                _singleCallbacks.Remove(Event);
 
-            _singlecallbacks.Add(Event, fn);
+            _singleCallbacks.Add(Event, fn);
 
             return this;
         }
 
         public Emitter OnSubscribe(string Event, Listener fn)
         {
-            if (_publishcallbacks.ContainsKey(Event))
-                _publishcallbacks.Remove(Event);
-            _publishcallbacks.Add(Event, fn);
+            if (_publishCallbacks.ContainsKey(Event))
+                _publishCallbacks.Remove(Event);
+            _publishCallbacks.Add(Event, fn);
             return this;
         }
 
         public Emitter On(string Event, AckListener fn)
         {
-            if (_singleackcallbacks.ContainsKey(Event))
-                _singleackcallbacks.Remove(Event);
-            _singleackcallbacks.Add(Event, fn);
+            if (_singleAckCallbacks.ContainsKey(Event))
+                _singleAckCallbacks.Remove(Event);
+            _singleAckCallbacks.Add(Event, fn);
             return this;
         }
 
         public Emitter HandleEmit(string Event, object Object)
         {
-            if (!_singlecallbacks.ContainsKey(Event)) return this;
-            var listener = _singlecallbacks[Event];
+            if (!_singleCallbacks.ContainsKey(Event)) return this;
+            var listener = _singleCallbacks[Event];
             listener(Event, Object);
             return this;
         }
 
         public Emitter HandlePublish(string Event, object Object)
         {
-            if (!_publishcallbacks.ContainsKey(Event)) return this;
-            var listener = _publishcallbacks[Event];
+            if (!_publishCallbacks.ContainsKey(Event)) return this;
+            var listener = _publishCallbacks[Event];
             listener(Event, Object);
             return this;
         }
 
-        public bool HasEventAck(string Event) => _singleackcallbacks.ContainsKey(Event);
+        public bool HasEventAck(string Event) => _singleAckCallbacks.ContainsKey(Event);
 
-        public Emitter HandleEmitAck(string Event, object Object, Ackcall ack)
+        public Emitter HandleEmitAck(string Event, object Object, AckCall ack)
         {
-            if (!_singleackcallbacks.ContainsKey(Event)) return this;
-            var listener = _singleackcallbacks[Event];
+            if (!_singleAckCallbacks.ContainsKey(Event)) return this;
+            var listener = _singleAckCallbacks[Event];
             listener(Event, Object, ack);
             return this;
         }

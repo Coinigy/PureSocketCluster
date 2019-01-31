@@ -1,8 +1,12 @@
-﻿namespace PureSocketCluster
+﻿using System.Runtime.Serialization;
+
+namespace PureSocketCluster
 {
     public class Creds
     {
-        public string apiKey { get; set; }
-        public string apiSecret { get; set; }
+        [DataMember(Name = "apiKey")]
+        public string ApiKey { get; set; }
+        [DataMember(Name = "apiSecret")]
+        public string ApiSecret { get; set; }
     }
 }
