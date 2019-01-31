@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.WebSockets;
+using System.Threading.Tasks;
 using PureSocketCluster;
 using PureWebSockets;
 
@@ -9,7 +11,7 @@ namespace PureSocketClusterTest
     {
         private static PureSocketClusterSocket _scc;
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             // input credentials if used, different systems use different auth systems this however is the most common (passing 'auth' event with your credentials)
             var creds = new Creds
@@ -29,6 +31,9 @@ namespace PureSocketClusterTest
 
 	        // initialize the client
             _scc = new PureSocketClusterSocket("wss://yoursocketclusterserver.com/socketcluster/", opts);
+            // set the channels we want to subscribe to
+            var cn = _scc.CreateChannel("TRADE-GDAX--BTC--USD").Subscribe();
+            cn.OnMessage(TradeData);
 
             // hook up to some events
             _scc.OnOpened += Scc_OnOpened;
@@ -39,15 +44,7 @@ namespace PureSocketClusterTest
             _scc.OnClosed += _scc_OnClosed;
             _scc.OnData += _scc_OnData;
             _scc.OnFatality += _scc_OnFatality;
-            _scc.Connect();
-
-            // subscribe to some channels
-            var cn = _scc.CreateChannel("TRADE-PLNX--BTC--ETC").Subscribe();
-            cn.OnMessage(TradeData);
-            var cn0 = _scc.CreateChannel("TRADE-PLNX--BTC--ETH").Subscribe();
-            cn0.OnMessage(TradeData);
-            var cn1 = _scc.CreateChannel("TRADE-GDAX--BTC--USD").Subscribe();
-            cn1.OnMessage(TradeData);
+            await _scc.ConnectAsync();
 
             Console.ReadLine();
         }
