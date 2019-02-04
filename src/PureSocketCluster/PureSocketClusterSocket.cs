@@ -32,7 +32,6 @@ namespace PureSocketCluster
         private readonly Dictionary<long?, object[]> _acks;
         private readonly PureSocketClusterOptions _options;
         private readonly AsyncLock _syncLockChannels = new AsyncLock();
-        //private readonly object _syncLockChannels = new object();
 
         public event Closed OnClosed;
         public event Data OnData;
