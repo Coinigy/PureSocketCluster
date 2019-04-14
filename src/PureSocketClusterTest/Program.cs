@@ -16,8 +16,8 @@ namespace PureSocketClusterTest
             // input credentials if used, different systems use different auth systems this however is the most common (passing 'auth' event with your credentials)
             var creds = new Creds
             {
-                apiKey = "your apikey if used",
-				apiSecret = "your api secret if used"
+                ApiKey = "your apikey if used",
+				ApiSecret = "your api secret if used"
 			};
 
 			// setup our options
