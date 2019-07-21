@@ -4,8 +4,8 @@ namespace PureSocketCluster
 {
     public class PureSocketClusterOptions : PureWebSocketOptions
     {
-	    public Creds Creds { get; set; }
+        public Creds Creds { get; set; }
 
-		public ISerializer Serializer { get; set; }
-	}
+        public ISerializer Serializer { get; set; }
+    }
 }

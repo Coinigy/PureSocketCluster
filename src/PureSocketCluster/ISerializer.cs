@@ -2,8 +2,8 @@
 {
     public interface ISerializer
     {
-		T Deserialize<T>(string json);
+        T Deserialize<T>(string json);
 
-	    byte[] Serialize(object obj);
+        byte[] Serialize(object obj);
     }
 }
