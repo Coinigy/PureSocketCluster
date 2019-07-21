@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Author: ByronP
  * Date: 1/15/2017
  * Mod: 07/21/2019
@@ -44,6 +44,11 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, PureSocketClusterOptions options)
         {
+            if (_options.DebugMode)
+            {
+                Log("WARNING: Debug logging is enabled, sensitive data may be disclosed!");
+            }
+
             _options = options;
 
             Log("Creating new instance.");
