@@ -16,7 +16,10 @@ namespace PureSocketCluster.Nito
         public static void WaitAndUnwrapException(this Task task)
         {
             if (task == null)
+            {
                 throw new ArgumentNullException(nameof(task));
+            }
+
             task.GetAwaiter().GetResult();
         }
 
@@ -29,7 +32,10 @@ namespace PureSocketCluster.Nito
         public static void WaitAndUnwrapException(this Task task, CancellationToken cancellationToken)
         {
             if (task == null)
+            {
                 throw new ArgumentNullException(nameof(task));
+            }
+
             try
             {
                 task.Wait(cancellationToken);
@@ -49,7 +55,10 @@ namespace PureSocketCluster.Nito
         public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task)
         {
             if (task == null)
+            {
                 throw new ArgumentNullException(nameof(task));
+            }
+
             return task.GetAwaiter().GetResult();
         }
 
@@ -64,7 +73,10 @@ namespace PureSocketCluster.Nito
         public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task, CancellationToken cancellationToken)
         {
             if (task == null)
+            {
                 throw new ArgumentNullException(nameof(task));
+            }
+
             try
             {
                 task.Wait(cancellationToken);
@@ -83,13 +95,17 @@ namespace PureSocketCluster.Nito
         public static void WaitWithoutException(this Task task)
         {
             if (task == null)
+            {
                 throw new ArgumentNullException(nameof(task));
+            }
+
             try
             {
                 task.Wait();
             }
             catch (AggregateException)
             {
+                // ignore
             }
         }
 
@@ -102,7 +118,10 @@ namespace PureSocketCluster.Nito
         public static void WaitWithoutException(this Task task, CancellationToken cancellationToken)
         {
             if (task == null)
+            {
                 throw new ArgumentNullException(nameof(task));
+            }
+
             try
             {
                 task.Wait(cancellationToken);

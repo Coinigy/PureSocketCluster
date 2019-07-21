@@ -14,7 +14,11 @@
 
         internal static ParseResult Parse(long? rid, string strEvent)
         {
-            if (string.IsNullOrEmpty(strEvent)) return rid == 1 ? ParseResult.IsAuthenticated : ParseResult.AckReceive;
+            if (string.IsNullOrEmpty(strEvent))
+            {
+                return rid == 1 ? ParseResult.IsAuthenticated : ParseResult.AckReceive;
+            }
+
             switch (strEvent)
             {
                 case "#publish":

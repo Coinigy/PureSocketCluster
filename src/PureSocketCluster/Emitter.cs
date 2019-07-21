@@ -11,17 +11,21 @@ namespace PureSocketCluster
         public Emitter On(string Event, Listener fn)
         {
             if (_singleCallbacks.ContainsKey(Event))
+            {
                 _singleCallbacks.Remove(Event);
+            }
 
             _singleCallbacks.Add(Event, fn);
-
             return this;
         }
 
         public Emitter OnSubscribe(string Event, Listener fn)
         {
             if (_publishCallbacks.ContainsKey(Event))
+            {
                 _publishCallbacks.Remove(Event);
+            }
+
             _publishCallbacks.Add(Event, fn);
             return this;
         }
@@ -29,14 +33,21 @@ namespace PureSocketCluster
         public Emitter On(string Event, AckListener fn)
         {
             if (_singleAckCallbacks.ContainsKey(Event))
+            {
                 _singleAckCallbacks.Remove(Event);
+            }
+
             _singleAckCallbacks.Add(Event, fn);
             return this;
         }
 
         public Emitter HandleEmit(string Event, object Object)
         {
-            if (!_singleCallbacks.ContainsKey(Event)) return this;
+            if (!_singleCallbacks.ContainsKey(Event))
+            {
+                return this;
+            }
+
             var listener = _singleCallbacks[Event];
             listener(Event, Object);
             return this;
@@ -44,7 +55,11 @@ namespace PureSocketCluster
 
         public Emitter HandlePublish(string Event, object Object)
         {
-            if (!_publishCallbacks.ContainsKey(Event)) return this;
+            if (!_publishCallbacks.ContainsKey(Event))
+            {
+                return this;
+            }
+
             var listener = _publishCallbacks[Event];
             listener(Event, Object);
             return this;
@@ -54,7 +69,11 @@ namespace PureSocketCluster
 
         public Emitter HandleEmitAck(string Event, object Object, AckCall ack)
         {
-            if (!_singleAckCallbacks.ContainsKey(Event)) return this;
+            if (!_singleAckCallbacks.ContainsKey(Event))
+            {
+                return this;
+            }
+
             var listener = _singleAckCallbacks[Event];
             listener(Event, Object, ack);
             return this;

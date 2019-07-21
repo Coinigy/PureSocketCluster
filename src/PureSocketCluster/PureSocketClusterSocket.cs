@@ -1,7 +1,7 @@
 ﻿/*
  * Author: ByronP
  * Date: 1/15/2017
- * Mod: 01/30/2019
+ * Mod: 07/21/2019
  * Coinigy Inc. Coinigy.com
  */
 using System;
@@ -20,7 +20,7 @@ namespace PureSocketCluster
 {
     public class PureSocketClusterSocket : Emitter, IDisposable
     {
-        public string Id;
+        public string Id { get; set; }
         public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
         public WebSocketState SocketState => _socket.State;
 
@@ -116,7 +116,7 @@ namespace PureSocketCluster
             }
             else if (message == "1")
             {
-                _ =_socket.SendAsync("2");
+                _ = _socket.SendAsync("2");
                 return;
             }
 
@@ -142,7 +142,7 @@ namespace PureSocketCluster
                         hasChannels = Channels.Any();
 
                     if (hasChannels)
-                            _ = SubscribeChannelsAsync();
+                        _ = SubscribeChannelsAsync();
                     break;
                 case Parser.ParseResult.Publish:
                     HandlePublish(dataObject["channel"], dataObject["data"]);
@@ -155,9 +155,13 @@ namespace PureSocketCluster
                     break;
                 case Parser.ParseResult.Event:
                     if (HasEventAck(strEvent))
+                    {
                         HandleEmitAck(strEvent, dataObject, Ack(cid));
+                    }
                     else
+                    {
                         HandleEmit(strEvent, dataObject);
+                    }
                     break;
                 case Parser.ParseResult.AckReceive:
                     if (_acks.TryGetValue(rid, out var value))

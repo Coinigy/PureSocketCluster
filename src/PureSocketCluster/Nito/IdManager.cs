@@ -6,16 +6,14 @@ namespace PureSocketCluster.Nito
     /// Allocates Ids for instances on demand. 0 is an invalid/unassigned Id. Ids may be non-unique in very long-running systems. This is similar to the Id system used by <see cref="System.Threading.Tasks.Task"/> and <see cref="System.Threading.Tasks.TaskScheduler"/>.
     /// </summary>
     /// <typeparam name="TTag">The type for which ids are generated.</typeparam>
-// ReSharper disable UnusedTypeParameter
+    // ReSharper disable once UnusedTypeParameter
     internal static class IdManager<TTag>
-    // ReSharper restore UnusedTypeParameter
     {
         /// <summary>
         /// The last id generated for this type. This is 0 if no ids have been generated.
         /// </summary>
-// ReSharper disable StaticFieldInGenericType
+        // ReSharper disable once StaticMemberInGenericType
         private static int _lastId;
-        // ReSharper restore StaticFieldInGenericType
 
         /// <summary>
         /// Returns the id, allocating it if necessary.

@@ -21,9 +21,7 @@ namespace PureSocketCluster.Nito
         /// <param name="task">The underlying task to wrap. This may not be <c>null</c>.</param>
         public AwaitableDisposable(Task<T> task)
         {
-            if (task == null)
-                throw new ArgumentNullException(nameof(task));
-            _task = task;
+            _task = task ?? throw new ArgumentNullException(nameof(task));
         }
 
         /// <summary>
