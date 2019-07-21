@@ -23,7 +23,9 @@ namespace PureSocketCluster.Nito
         {
             // If the Id has already been assigned, just use it.
             if (id != 0)
+            {
                 return id;
+            }
 
             // Determine the new Id without modifying "id", since other threads may also be determining the new Id at the same time.
             int newId;

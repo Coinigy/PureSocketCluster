@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Author: ByronP
  * Date: 1/15/2017
  * Mod: 07/21/2019
@@ -54,7 +54,10 @@ namespace PureSocketCluster
             Log("Creating new instance.");
 
             if (options.Serializer is null)
+            {
                 options.Serializer = new Utf8JsonSerializer();
+            }
+
             _counter = 0;
 
             Channels = new List<Channel>();
@@ -128,7 +131,9 @@ namespace PureSocketCluster
             var dict = _options.Serializer.Deserialize<Dictionary<string, object>>(message);
 
             if (!dict.TryGetValue("data", out dynamic dataObject))
+            {
                 return;
+            }
             dict.TryGetValue("rid", out var tmpRid);
             dict.TryGetValue("cid", out var tmpCid);
             dict.TryGetValue("event", out var tmpStrEvent);
@@ -147,7 +152,9 @@ namespace PureSocketCluster
                         hasChannels = Channels.Any();
 
                     if (hasChannels)
+                    {
                         _ = SubscribeChannelsAsync();
+                    }
                     break;
                 case Parser.ParseResult.Publish:
                     HandlePublish(dataObject["channel"], dataObject["data"]);
@@ -250,17 +257,6 @@ namespace PureSocketCluster
             Log($"GetChannelByName invoked, {name}.");
             using (_syncLockChannels.Lock())
                 return Channels.FirstOrDefault(channel => channel.GetChannelName().Equals(name));
-        }
-
-        private void SubscribeChannels()
-        {
-            Log("SubscribeChannels invoked.");
-            using (_syncLockChannels.Lock())
-                foreach (var channel in Channels)
-                {
-                    Log($"Subscribing to channel {channel.GetChannelName()}");
-                    channel.Subscribe();
-                }
         }
 
         private async Task SubscribeChannelsAsync()
@@ -562,7 +558,7 @@ namespace PureSocketCluster
         {
             Log("Dispose invoked.");
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
+            Dispose(true, false);
         }
 
         public void Dispose(bool waitForSendsToComplete)
@@ -577,7 +573,9 @@ namespace PureSocketCluster
         internal void Log(string message, [CallerMemberName] string memberName = "")
         {
             if (_options is null || _options.DebugMode)
+            {
                 Task.Run(() => Console.WriteLine($"{DateTime.Now:O} PureSocketClusterSocket.{memberName}: {message}"));
+            }
         }
     }
 }
