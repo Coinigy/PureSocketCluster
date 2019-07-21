@@ -35,8 +35,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="Nito.Collections.Deque" Version="1.0.4" />
-    <PackageReference Include="Nito.Disposables" Version="2.0.0" />
-    <PackageReference Include="PureWebSockets" Version="2.4.3" />
+    <PackageReference Include="Nito.Disposables" Version="2.0.1" />
+    <PackageReference Include="PureWebSockets" Version="2.4.4" />
     <PackageReference Include="Utf8Json" Version="1.3.7" />
   </ItemGroup>
 
