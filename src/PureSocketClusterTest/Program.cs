@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using PureSocketCluster;
@@ -30,9 +29,10 @@ namespace PureSocketClusterTest
             };
 
             // initialize the client
-            _scc = new PureSocketClusterSocket("wss://yoursocketclusterserver.com/socketcluster/", opts);
+            _scc = new PureSocketClusterSocket("wss://sc-02.coinigy.com/socketcluster/", opts, "MyOptionsInstanceName1");
+
             // set the channels we want to subscribe to
-            var cn = _scc.CreateChannel("TRADE-GDAX--BTC--USD").Subscribe();
+            var cn = await _scc.CreateChannel("TRADE-GDAX--BTC--USD").SubscribeAsync();
             cn.OnMessage(TradeData);
 
             // hook up to some events
@@ -44,82 +44,57 @@ namespace PureSocketClusterTest
             _scc.OnClosed += _scc_OnClosed;
             _scc.OnData += _scc_OnData;
             _scc.OnFatality += _scc_OnFatality;
+
+            // connect to the server
             await _scc.ConnectAsync();
 
             Console.ReadLine();
         }
 
-        private static void _scc_OnFatality(string reason)
+        private static void _scc_OnFatality(object sender, string reason)
         {
             // fatality is as bad as it gets and you should probably quit here
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine($"Fatality: {reason}");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Fatality: {reason} \r\n", ConsoleColor.Magenta);
         }
 
-        private static void _scc_OnData(byte[] data)
+        private static void _scc_OnData(object sender, byte[] data)
         {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"Binary: {data}");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Binary: {data} \r\n", ConsoleColor.White);
         }
 
-        private static void _scc_OnClosed(WebSocketCloseStatus reason)
+        private static void _scc_OnClosed(object sender, WebSocketCloseStatus reason)
         {
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine($"Socket Closed: {reason}");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Socket Closed: {reason} \r\n", ConsoleColor.DarkRed);
         }
 
-        private static void _scc_OnError(Exception ex)
+        private static void _scc_OnError(object sender, Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine($"Error: {ex}");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Error: {ex} \r\n", ConsoleColor.Gray);
         }
 
-        private static void _scc_OnSendFailed(string data, Exception ex)
+        private static void _scc_OnSendFailed(object sender, string data, Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Magenta;
-            Console.WriteLine($"send failed: {data} Ex: {ex}");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Send failed: {data} Ex: {ex} \r\n", ConsoleColor.Magenta);
         }
 
-        private static void _scc_OnStateChanged(WebSocketState newState, WebSocketState prevState)
+        private static void _scc_OnStateChanged(object sender, WebSocketState newState, WebSocketState prevState)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"State changed from {prevState} to {newState}");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} State changed from {prevState} to {newState} \r\n", ConsoleColor.Yellow);
         }
 
-        private static void TradeData(string name, object data)
+        private static void TradeData(object sender, string name, object data)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(name + ": " + data);
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} {name} : {data} \r\n", ConsoleColor.Green);
         }
 
-        private static void _scc_OnMessage(string message)
+        private static void _scc_OnMessage(object sender, string message)
         {
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine(message);
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Message : {message} \r\n", ConsoleColor.Blue);
         }
 
-        private static void Scc_OnOpened()
+        private static void Scc_OnOpened(object sender)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Opened");
-            Console.ResetColor();
-            Console.WriteLine("");
+            OutputConsole.WriteLine($"{((PureSocketClusterSocket)sender).InstanceName} Connection Opened \r\n", ConsoleColor.Yellow);
         }
     }
 }

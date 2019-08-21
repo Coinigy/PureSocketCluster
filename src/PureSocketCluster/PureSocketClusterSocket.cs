@@ -1,7 +1,7 @@
 ﻿/*
  * Author: ByronP
  * Date: 1/15/2017
- * Mod: 07/21/2019
+ * Mod: 08/21/2019
  * Coinigy Inc. Coinigy.com
  */
 using System;
@@ -21,6 +21,7 @@ namespace PureSocketCluster
     public class PureSocketClusterSocket : Emitter, IDisposable
     {
         public string Id { get; set; }
+        public string InstanceName => _socket.InstanceName;
         public int SocketSendQueueLength => _socket?.SendQueueLength ?? 0;
         public WebSocketState SocketState => _socket.State;
 
@@ -44,12 +45,12 @@ namespace PureSocketCluster
 
         public PureSocketClusterSocket(string url, PureSocketClusterOptions options)
         {
+            _options = options;
+
             if (_options.DebugMode)
             {
                 Log("WARNING: Debug logging is enabled, sensitive data may be disclosed!");
             }
-
-            _options = options;
 
             Log("Creating new instance.");
 
@@ -65,6 +66,33 @@ namespace PureSocketCluster
             _acks = new Dictionary<long?, object[]>();
 
             _socket = new PureWebSocket(url, options);
+
+            SetupEvents();
+        }
+
+        public PureSocketClusterSocket(string url, PureSocketClusterOptions options, string instanceName)
+        {
+            _options = options;
+
+            if (_options.DebugMode)
+            {
+                Log("WARNING: Debug logging is enabled, sensitive data may be disclosed!");
+            }
+
+            Log("Creating new instance.");
+
+            if (options.Serializer is null)
+            {
+                options.Serializer = new Utf8JsonSerializer();
+            }
+
+            _counter = 0;
+
+            Channels = new List<Channel>();
+
+            _acks = new Dictionary<long?, object[]>();
+
+            _socket = new PureWebSocket(url, options, instanceName);
 
             SetupEvents();
         }
@@ -88,34 +116,34 @@ namespace PureSocketCluster
         /// <param name="serializer">your serializer</param>
         public void SetSerializer(ISerializer serializer) => _options.Serializer = serializer;
 
-        private void Socket_OnStateChanged(WebSocketState newState, WebSocketState prevState)
+        private void Socket_OnStateChanged(object sender, WebSocketState newState, WebSocketState prevState)
         {
             Log($"State changed from {prevState} to {newState}.");
-            OnStateChanged?.Invoke(newState, prevState);
+            OnStateChanged?.Invoke(this, newState, prevState);
         }
 
-        private void Socket_OnSendFailed(string data, Exception ex)
+        private void Socket_OnSendFailed(object sender, string data, Exception ex)
         {
             Log($"Send failed: Ex: {ex.Message}, Data: {data}");
-            OnSendFailed?.Invoke(data, ex);
+            OnSendFailed?.Invoke(this, data, ex);
         }
 
-        private void Socket_OnFatality(string reason)
+        private void Socket_OnFatality(object sender, string reason)
         {
             Log($"Fatality, reason {reason}.");
-            OnFatality?.Invoke(reason);
+            OnFatality?.Invoke(this, reason);
         }
 
-        private void Socket_OnData(byte[] data)
+        private void Socket_OnData(object sender, byte[] data)
         {
             Log($"Received data: {Encoding.UTF8.GetString(data)}");
-            OnData?.Invoke(data);
+            OnData?.Invoke(this, data);
         }
 
-        private void Socket_OnMessage(string message)
+        private void Socket_OnMessage(object sender, string message)
         {
             Log($"Received message: {message}");
-            OnMessage?.Invoke(message);
+            OnMessage?.Invoke(this, message);
 
             if (message == "#1")
             {
@@ -157,7 +185,7 @@ namespace PureSocketCluster
                     }
                     break;
                 case Parser.ParseResult.Publish:
-                    HandlePublish(dataObject["channel"], dataObject["data"]);
+                    HandlePublish(this, dataObject["channel"], dataObject["data"]);
                     break;
                 case Parser.ParseResult.RemoveToken:
                     SetAuthToken(null);
@@ -168,11 +196,11 @@ namespace PureSocketCluster
                 case Parser.ParseResult.Event:
                     if (HasEventAck(strEvent))
                     {
-                        HandleEmitAck(strEvent, dataObject, Ack(cid));
+                        HandleEmitAck(this, strEvent, dataObject, Ack(cid));
                     }
                     else
                     {
-                        HandleEmit(strEvent, dataObject);
+                        HandleEmit(this, strEvent, dataObject);
                     }
                     break;
                 case Parser.ParseResult.AckReceive:
@@ -187,7 +215,7 @@ namespace PureSocketCluster
                                 dict.TryGetValue("error", out var err);
                                 dict.TryGetValue("data", out var dat);
 
-                                fn((string)value[0], err, dat);
+                                fn(this, (string)value[0], err, dat);
                             }
                             else
                             {
@@ -201,19 +229,19 @@ namespace PureSocketCluster
             }
         }
 
-        private void Socket_OnClosed(WebSocketCloseStatus reason)
+        private void Socket_OnClosed(object sender, WebSocketCloseStatus reason)
         {
             Log("OnClosed invoked.");
-            OnClosed?.Invoke(reason);
+            OnClosed?.Invoke(this, reason);
         }
 
-        private void Socket_OnError(Exception ex)
+        private void Socket_OnError(object sender, Exception ex)
         {
             Log($"OnError invoked, {ex.Message}");
-            OnError?.Invoke(ex);
+            OnError?.Invoke(this, ex);
         }
 
-        private void Socket_OnOpened()
+        private void Socket_OnOpened(object sender)
         {
             Log("OnOpened invoked.");
             _counter = 0;
@@ -233,7 +261,7 @@ namespace PureSocketCluster
                 Task.Delay(500).Wait();
             }
 
-            OnOpened?.Invoke();
+            OnOpened?.Invoke(this);
         }
 
         public Channel CreateChannel(string name)
@@ -276,7 +304,7 @@ namespace PureSocketCluster
             _authToken = token;
         }
 
-        public bool Connect()
+        public bool Connect(object sender)
         {
             Log("Connect invoked.");
             try
@@ -286,7 +314,7 @@ namespace PureSocketCluster
             catch (Exception ex)
             {
                 Log($"Connect thew an exception, {ex.Message}.");
-                Socket_OnError(ex);
+                Socket_OnError(this, ex);
                 throw;
             }
         }
@@ -301,7 +329,7 @@ namespace PureSocketCluster
             catch (Exception ex)
             {
                 Log($"Connect thew an exception, {ex.Message}.");
-                Socket_OnError(ex);
+                Socket_OnError(this, ex);
                 throw;
             }
         }
@@ -315,7 +343,7 @@ namespace PureSocketCluster
         public AckCall Ack(long? cid)
         {
             Log($"Ack invoked, CID {cid}.");
-            return (name, error, data) =>
+            return (sender, name, error, data) =>
             {
                 var dataObject = new Dictionary<string, object> { { "error", error }, { "data", data }, { "rid", cid } };
                 var json = _options.Serializer.Serialize(dataObject);

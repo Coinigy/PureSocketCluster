@@ -41,7 +41,7 @@ namespace PureSocketCluster
             return this;
         }
 
-        public Emitter HandleEmit(string Event, object Object)
+        public Emitter HandleEmit(object sender, string Event, object Object)
         {
             if (!_singleCallbacks.ContainsKey(Event))
             {
@@ -49,11 +49,11 @@ namespace PureSocketCluster
             }
 
             var listener = _singleCallbacks[Event];
-            listener(Event, Object);
+            listener(sender, Event, Object);
             return this;
         }
 
-        public Emitter HandlePublish(string Event, object Object)
+        public Emitter HandlePublish(object sender, string Event, object Object)
         {
             if (!_publishCallbacks.ContainsKey(Event))
             {
@@ -61,13 +61,13 @@ namespace PureSocketCluster
             }
 
             var listener = _publishCallbacks[Event];
-            listener(Event, Object);
+            listener(sender, Event, Object);
             return this;
         }
 
         public bool HasEventAck(string Event) => _singleAckCallbacks.ContainsKey(Event);
 
-        public Emitter HandleEmitAck(string Event, object Object, AckCall ack)
+        public Emitter HandleEmitAck(object sender, string Event, object Object, AckCall ack)
         {
             if (!_singleAckCallbacks.ContainsKey(Event))
             {
@@ -75,7 +75,7 @@ namespace PureSocketCluster
             }
 
             var listener = _singleAckCallbacks[Event];
-            listener(Event, Object, ack);
+            listener(sender, Event, Object, ack);
             return this;
         }
     }
