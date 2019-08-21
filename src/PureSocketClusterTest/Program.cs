@@ -29,7 +29,7 @@ namespace PureSocketClusterTest
             };
 
             // initialize the client
-            _scc = new PureSocketClusterSocket("wss://sc-02.coinigy.com/socketcluster/", opts, "MyOptionsInstanceName1");
+            _scc = new PureSocketClusterSocket("wss://sc-02.coinigy.com/socketcluster/", opts, "MyOptionalInstanceName1");
 
             // set the channels we want to subscribe to
             var cn = await _scc.CreateChannel("TRADE-GDAX--BTC--USD").SubscribeAsync();
