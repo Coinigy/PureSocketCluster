@@ -304,7 +304,7 @@ namespace PureSocketCluster
             _authToken = token;
         }
 
-        public bool Connect(object sender)
+        public bool Connect()
         {
             Log("Connect invoked.");
             try
